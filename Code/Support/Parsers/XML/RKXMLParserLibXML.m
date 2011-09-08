@@ -20,6 +20,14 @@
             NSString* nodeName = [NSString stringWithCString:(char*)currentNode->name encoding:NSUTF8StringEncoding];
             id val = [self parseNode:currentNode->children];
             if ([val isKindOfClass:[NSString class]]) {
+                if ([val isEqualToString:@"false"]) {
+                    val = [NSNumber numberWithBool:NO];
+                } else if ([val isEqualToString:@"true"]) {
+                    val = [NSNumber numberWithBool:YES];
+                } else if ([val isEqualToString:@""]) {
+                    val = nil;
+                }
+                
                 id oldVal = [attrs valueForKey:nodeName];
                 if (nil == oldVal) {
                     [attrs setValue:val forKey:nodeName];
@@ -128,9 +136,35 @@
     return [self parseXML:string];
 }
 
+- (void)parseDictionary:(id)object with:(NSMutableString*)mutableString 
+{
+    for (id key in object) {
+        id value = [object objectForKey:key];
+        if ([value isKindOfClass:[NSDictionary class]]) {
+            [mutableString appendFormat:@"<%@>", key];
+            [self parseDictionary:value with:mutableString];
+            [mutableString appendFormat:@"</%@>", key];
+        } else if ([value isKindOfClass:[NSArray class]]) {
+            for (id item in value) {
+                [mutableString appendFormat:@"<%@>", key];
+                [self parseDictionary:item with:mutableString];
+                [mutableString appendFormat:@"</%@>", key];
+            }
+        } else {
+            [mutableString appendFormat:@"<%@>%@</%@>", key, value, key];
+        }
+    }    
+}
+
 - (NSString*)stringFromObject:(id)object error:(NSError **)error {    
-    [self doesNotRecognizeSelector:_cmd];
-    return nil;
+    NSMutableString* mutableString = [[NSMutableString alloc] init];
+    
+    [self parseDictionary:object with:mutableString];
+    
+    NSString* copy = [[mutableString copy] autorelease];
+    [mutableString release];
+    
+    return copy;;
 }
 
 @end
