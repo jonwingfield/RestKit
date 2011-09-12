@@ -147,7 +147,11 @@
         } else if ([value isKindOfClass:[NSArray class]]) {
             for (id item in value) {
                 [mutableString appendFormat:@"<%@>", key];
-                [self parseDictionary:item with:mutableString];
+                if ([item isKindOfClass:[NSString class]]) {
+                    [mutableString appendString:item];
+                } else {
+                    [self parseDictionary:item with:mutableString];
+                }
                 [mutableString appendFormat:@"</%@>", key];
             }
         } else {
