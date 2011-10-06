@@ -397,6 +397,37 @@ BOOL RKObjectIsValueEqualToValue(id sourceValue, id destinationValue) {
         // If the relationship has changed, set it
         if ([self shouldSetValue:destinationObject atKeyPath:relationshipMapping.destinationKeyPath]) {
             RKLogTrace(@"Mapped relationship object from keyPath '%@' to '%@'. Value: %@", relationshipMapping.sourceKeyPath, relationshipMapping.destinationKeyPath, destinationObject);
+            
+            /******************************************************
+             TODO: this is fugly, fix it before sending a pull request
+             it's also probably slow
+             ******************************************************/
+            // Jon Wingfield - convert to an array here if it's not already one
+            if (![destinationObject isKindOfClass:[NSArray class]] && ![self.destinationObject isKindOfClass:[NSDictionary class]]) {
+                objc_property_t property = class_getProperty( [self.destinationObject class], [relationshipMapping.destinationKeyPath UTF8String] );
+                if ( property != NULL )
+                {
+                    const char * attrs = property_getAttributes( property );
+                    if ( attrs != NULL ) {
+                        static char buffer[256];
+                        const char * e = strchr( attrs, ',' );
+                        if ( e != NULL ) {
+                        
+                            int len = (int)(e - attrs);
+                            memcpy( buffer, attrs, len );
+                            buffer[len] = '\0';
+
+                            NSString* propString = [NSString stringWithUTF8String:buffer];
+                            
+                            if ([propString isEqualToString:@"T@\"NSArray\""]) {
+                                destinationObject = [NSArray arrayWithObject:destinationObject];
+                            }
+                        }
+                    }
+                }
+            }
+            /******************************************************/
+                        
             [self.destinationObject setValue:destinationObject forKey:relationshipMapping.destinationKeyPath];
         }
         
