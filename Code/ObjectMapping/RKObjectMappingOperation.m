@@ -409,17 +409,11 @@ BOOL RKObjectIsValueEqualToValue(id sourceValue, id destinationValue) {
                 {
                     const char * attrs = property_getAttributes( property );
                     if ( attrs != NULL ) {
-                        static char buffer[256];
                         const char * e = strchr( attrs, ',' );
                         if ( e != NULL ) {
                         
                             int len = (int)(e - attrs);
-                            memcpy( buffer, attrs, len );
-                            buffer[len] = '\0';
-
-                            NSString* propString = [NSString stringWithUTF8String:buffer];
-                            
-                            if ([propString isEqualToString:@"T@\"NSArray\""]) {
+                            if (strncmp(attrs, "T@\"NSArray\"", len) == 0) {
                                 destinationObject = [NSArray arrayWithObject:destinationObject];
                             }
                         }
