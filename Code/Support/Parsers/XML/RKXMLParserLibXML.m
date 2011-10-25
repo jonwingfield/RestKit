@@ -6,7 +6,11 @@
 //
 
 #import <libxml2/libxml/parser.h>
+#import <libxml2/libxml/encoding.h>
+#import <libxml2/libxml/xmlwriter.h>
 #import "RKXMLParserLibXML.h"
+
+#define XML_ENCODING "ISO-8859-1"
 
 @implementation RKXMLParserLibXML
 
@@ -136,39 +140,62 @@
     return [self parseXML:string];
 }
 
-- (void)parseDictionary:(id)object with:(NSMutableString*)mutableString 
+- (void)parseDictionary:(id)object with:(xmlTextWriterPtr)writer 
 {
     for (id key in object) {
         id value = [object objectForKey:key];
         if ([value isKindOfClass:[NSDictionary class]]) {
-            [mutableString appendFormat:@"<%@>", key];
-            [self parseDictionary:value with:mutableString];
-            [mutableString appendFormat:@"</%@>", key];
+            xmlTextWriterStartElement(writer, BAD_CAST [key cStringUsingEncoding:NSUTF8StringEncoding]);
+            [self parseDictionary:value with:writer];
+            xmlTextWriterEndElement(writer);
         } else if ([value isKindOfClass:[NSArray class]]) {
             for (id item in value) {
-                [mutableString appendFormat:@"<%@>", key];
                 if ([item isKindOfClass:[NSString class]]) {
-                    [mutableString appendString:item];
+                    xmlTextWriterWriteElement(writer, BAD_CAST [key cStringUsingEncoding:NSUTF8StringEncoding], BAD_CAST [item UTF8String]);
                 } else {
-                    [self parseDictionary:item with:mutableString];
+                    xmlTextWriterStartElement(writer, BAD_CAST [key cStringUsingEncoding:NSUTF8StringEncoding]);                
+                    [self parseDictionary:item with:writer];
+                    xmlTextWriterEndElement(writer);
                 }
-                [mutableString appendFormat:@"</%@>", key];
             }
         } else {
-            [mutableString appendFormat:@"<%@>%@</%@>", key, value, key];
+            xmlTextWriterWriteElement(writer, BAD_CAST [key cStringUsingEncoding:NSUTF8StringEncoding], BAD_CAST [[NSString stringWithFormat:@"%@", value] cStringUsingEncoding:NSUTF8StringEncoding]);
         }
     }    
 }
 
 - (NSString*)stringFromObject:(id)object error:(NSError **)error {    
-    NSMutableString* mutableString = [[NSMutableString alloc] init];
+    int rc;
+    xmlTextWriterPtr writer;
+    xmlBufferPtr buf;
+//    xmlChar *tmp;
+//    FILE *fp;
     
-    [self parseDictionary:object with:mutableString];
+    /* Create a new XML buffer, to which the XML document will be
+     * written */
+    buf = xmlBufferCreate();
+    if (buf == 0) {
+        [NSException raise:@"Error creating buffer to write XML!" format:@""];
+        return nil;
+    }
     
-    NSString* copy = [[mutableString copy] autorelease];
-    [mutableString release];
+    // create an xmlTextWriter that just writes to a memory buffer
+    writer = xmlNewTextWriterMemory(buf, 0); // 0 means no compresion
+    if (writer == 0) {
+        [NSException raise:@"Error creating text writer" format:@""];
+        return nil;
+    }
     
-    return copy;;
+    rc = xmlTextWriterStartDocument(writer, NULL, XML_ENCODING, NULL);
+    
+    [self parseDictionary:object with:writer];
+    
+    rc = xmlTextWriterEndDocument(writer);
+    xmlFreeTextWriter(writer);
+    
+    NSString* result = [NSString stringWithCString:(char*)buf->content encoding:NSUTF8StringEncoding];    
+    
+    return result;
 }
 
 @end
