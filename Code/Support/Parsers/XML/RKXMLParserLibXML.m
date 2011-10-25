@@ -168,8 +168,6 @@
     int rc;
     xmlTextWriterPtr writer;
     xmlBufferPtr buf;
-//    xmlChar *tmp;
-//    FILE *fp;
     
     /* Create a new XML buffer, to which the XML document will be
      * written */
@@ -194,6 +192,8 @@
     xmlFreeTextWriter(writer);
     
     NSString* result = [NSString stringWithCString:(char*)buf->content encoding:NSUTF8StringEncoding];    
+    
+    xmlBufferFree(buf);
     
     return result;
 }
