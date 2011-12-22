@@ -62,7 +62,7 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
 - (id)initWithHostname:(NSString*)hostName {
     self = [self init];    
     if (self) {
-        _hostName = [hostName retain];
+        _hostName = [hostName copy];
         
         // Try to determine if we have an IP address or a hostname
         struct sockaddr_in sa;
@@ -109,6 +109,8 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
     if (_reachabilityRef) {
         CFRelease(_reachabilityRef);
     }
+    
+    [_hostName release];
 	
     [super dealloc];
 }
